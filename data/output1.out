@@ -1,0 +1,5 @@
+297
+M4 M3
+Y B net1 A VDD
+M1 M2
+VSS B Y A VSS
