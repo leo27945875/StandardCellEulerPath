@@ -14,13 +14,16 @@
 #define NODE_EXT_LENGTH 25
 #define GATE_LENGTH     20
 
+#define TO_MICRO_SEC  1000000l
+#define MAX_FIND_TIME 3590l * 1000000l
+
 
 class EulerPath {
 public:
     using Node2GateMap    = std::unordered_map<Node*, std::vector<Gate*>>;
     using Gate2NodeMap    = std::unordered_map<Gate*, std::vector<Node*>>;
     using Node2NodeMap    = std::unordered_map<Node*, std::vector<Edge*>>;
-    using Gate2Instance   = std::unordered_map<std::string, Instance*>;
+    using Gate2Instance   = std::unordered_map<std::string, std::vector<Instance*>>;
 
     using NodeNameMap     = std::unordered_map<std::string, Node*>;
     using GateNameMap     = std::unordered_map<std::string, Gate*>;
@@ -69,6 +72,7 @@ public:
         const std::string& lStr
     );
 
+#if DEBUG == 1
     void      print                  ();
     void      printInstances         ();
     void      printNodes             ();
@@ -76,6 +80,8 @@ public:
     void      printNode2Gate         ();
     void      printGate2Node         ();
     void      printNode2Node         ();
+    void      printGate2Instance     ();
+#endif
 
     void      randomEulerPath        (std::vector<std::string>& nodeEulerPath,
                                       std::vector<std::string>& gateEulerPath, 
@@ -104,7 +110,9 @@ public:
                                       const std::vector<std::string>& gateEulerPath, 
                                       std::vector<std::string>& nodeGateEulerPath);
     void      makeNodeGateEulerPath  (const std::vector<std::string>& otherGateEulerPath,
-                                      std::vector<std::string>& nodeGateEulerPath);
+                                      std::vector<std::string>& nodeGateEulerPath,
+                                      std::vector<std::string>& nodeEulerPath,
+                                      std::vector<std::string>& gateEulerPath);
     void      recordNoDummyInfo      ();
     void      removeDummies          ();
 
@@ -121,10 +129,14 @@ public:
     EulerPathsHandler(std::string inputFilename);
 
 public:
+
+#if DEBUG == 1
     void   print                     ();
     void   print                     (MOS type);
+#endif
 
     void   randomTwoEulerPathStrategy(const std::string& outputFilename);
+    void   randomOneEulerPathStrategy(const std::string& outputFilename);
 
     double getHPWL                   (const std::vector<std::string>& nodeGateEulerPathP,
                                       const std::vector<std::string>& nodeGateEulerPathN);

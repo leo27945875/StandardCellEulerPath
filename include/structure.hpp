@@ -37,6 +37,7 @@ struct Instance
     {}
 };
 
+
 struct Edge {
     Gate* gate;
     Node* next;
@@ -46,6 +47,15 @@ struct Edge {
 };
 
 
+struct NodeHPWL {
+    double maxDistanceX = 0.;
+    bool   isVertical   = false;
+};
+
+
+#if DEBUG == 1
 void printNode2Gate_(const std::unordered_map<Node*, std::vector<Gate*>>& map);
 void printGate2Node_(const std::unordered_map<Gate*, std::vector<Node*>>& map);
 void printNode2Node_(const std::unordered_map<Node*, std::vector<Edge*>>& map);
+void printGate2Instance_(const std::unordered_map<std::string, std::vector<Instance*>>& map);
+#endif

@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <stdexcept>
 
-#define DEBUG 1
+#define DEBUG 0
 
 #if DEBUG == 1
     #define LOG(x)                 std::cout << x << std::endl;
@@ -32,10 +32,6 @@
     #define AAA 
     #define BBB 
 #endif
- 
-#define FIXLOG(x)      std::cout << x << std::endl;
-#define FIXLOGKV(x, y) std::cout << x << " = " << y <<  std::endl;
-#define FIX_END_LINE   std::cout << std::endl;
 
 #define RANDOM_INT(MAX)          (rand() % MAX)
 #define RANDOM_BETWEEN(MIN, MAX) (rand() % (MAX - MIN) + MIN)
@@ -53,20 +49,10 @@ enum class MOS : int8_t {
 MOS    getMOSTypeByString(std::string str);
 double getNumberByString (std::string str);
 
+
 template<class T>
 bool isInVector(std::vector<T>& vec, const T& val){
     return std::find(vec.begin(), vec.end(), val) != vec.end();
-}
-
-template<class T>
-void printVector(const std::vector<T>& vec){
-    for (int i = 0; i < vec.size(); i++){
-        if (i != vec.size() - 1)
-            std::cout << vec[i] << ", ";
-        else
-            std::cout << vec[i];
-    }
-    FIX_END_LINE
 }
 
 template<class T>
@@ -88,3 +74,16 @@ std::string concatStringVector(const std::vector<T>& vec){
     
     return concat;
 }
+
+#if DEBUG == 1
+template<class T>
+void printVector(const std::vector<T>& vec){
+    for (int i = 0; i < vec.size(); i++){
+        if (i != vec.size() - 1)
+            std::cout << vec[i] << ", ";
+        else
+            std::cout << vec[i];
+    }
+    END_LINE
+}
+#endif

@@ -9,7 +9,7 @@ int main(int argc, char* args[]){
 
     EulerPathsHandler algo(inputfilename);
 
-    algo.randomTwoEulerPathStrategy(outputfilename);
+    algo.randomOneEulerPathStrategy(outputfilename);
 
     return 0;
 }

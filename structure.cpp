@@ -1,6 +1,8 @@
 #include "include/structure.hpp"
 
 
+#if DEBUG == 1
+
 void printNode2Gate_(const std::unordered_map<Node*, std::vector<Gate*>>& map){
     END_LINE
     LOG("Node2Gate :")
@@ -36,3 +38,17 @@ void printNode2Node_(const std::unordered_map<Node*, std::vector<Edge*>>& map){
         }
     }
 }
+
+void printGate2Instance_(const std::unordered_map<std::string, std::vector<Instance*>>& map){
+    END_LINE
+    LOG("Gate2Instance :")
+    for (auto& it0 : map){
+        std::cout << "[Gate " << it0.first << "] : ";
+        for (Instance* inst : it0.second){
+            std::cout << inst->name << " ";
+        }
+        END_LINE
+    }
+}
+
+#endif

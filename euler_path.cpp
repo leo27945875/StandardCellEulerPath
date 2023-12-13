@@ -8,6 +8,8 @@
 #include <unordered_set>
 #include <stack>
 #include <list>
+#include <limits>
+#include <ctime>
 #include "include/euler_path.hpp"
 #include "include/utils.hpp"
 
@@ -56,6 +58,7 @@ void EulerPathsHandler::outputToFile(
     f.close();
 }
 
+#if DEBUG == 1
 void EulerPathsHandler::print(){
     END_LINE
     DASH_LINE
@@ -85,47 +88,42 @@ void EulerPathsHandler::print(MOS type){
         break;
     }
 }
+#endif
 
 void EulerPathsHandler::randomTwoEulerPathStrategy(const std::string& outputFilename){
-    srand(time(NULL));
     int loop = 1;
     do {
         LOOP_START(loop)
 
         std::vector<std::string> nodePathP, gatePathP, instancePathP, nodeGatePathP;
         std::vector<std::string> nodePathN, gatePathN, instancePathN, nodeGatePathN;
+
         m_PMOSNet.randomEulerPath(nodePathP, gatePathP, instancePathP, nodeGatePathP);
         m_NMOSNet.randomEulerPath(nodePathN, gatePathN, instancePathN, nodeGatePathN);
         
-        // END_LINE
-        // LOG("[PMOS Instance Path] :")
-        // printVector(instancePathP);
-        // LOG("[NMOS Instance Path] :")
-        // printVector(instancePathN);
-        // END_LINE
-        // LOG("[PMOS NodeGate Path] :")
-        // printVector(nodeGatePathP);
-        // LOG("[NMOS NodeGate Path] :")
-        // printVector(nodeGatePathN);
-
         std::vector<std::string> newInstanceDummiesP, newNodeGateDummiesP;
         std::vector<std::string> newInstanceDummiesN, newNodeGateDummiesN;
 
         alignInstanceDummies(instancePathP, instancePathN, newInstanceDummiesP, newInstanceDummiesN);
+        alignNodeGateDummies(nodeGatePathP, nodeGatePathN, newNodeGateDummiesP, newNodeGateDummiesN);
+
+        double HPWL = getHPWL(newNodeGateDummiesP, newNodeGateDummiesN);
+        
+#if DEBUG == 1
         LOG("[PMOS Instance Path with Dummies] :")
         printVector(newInstanceDummiesP);
         LOG("[NMOS Instance Path with Dummies] :")
         printVector(newInstanceDummiesN);
         END_LINE
-        alignNodeGateDummies(nodeGatePathP, nodeGatePathN, newNodeGateDummiesP, newNodeGateDummiesN);
         LOG("[PMOS NodeGate Path with Dummies] :")
         printVector(newNodeGateDummiesP);
         LOG("[NMOS NodeGate Path with Dummies] :")
         printVector(newNodeGateDummiesN);
-        double HPWL = getHPWL(newNodeGateDummiesP, newNodeGateDummiesN);
         LOGKV(HPWL)
+#endif
 
         if (isSameGateOrder(newNodeGateDummiesP, newNodeGateDummiesN)){
+#if DEBUG == 1
             END_LINE DDASH_LINE
             LOG("[Found !!!]")
             LOG("[PMOS NodeGate Path with Dummies] :")
@@ -134,7 +132,7 @@ void EulerPathsHandler::randomTwoEulerPathStrategy(const std::string& outputFile
             printVector(newNodeGateDummiesN);
             LOGKV(HPWL)
             END_LINE
-
+#endif
             outputToFile(
                 outputFilename,
                 newInstanceDummiesP,
@@ -150,6 +148,68 @@ void EulerPathsHandler::randomTwoEulerPathStrategy(const std::string& outputFile
         loop++;
 
     } while(true);
+}
+
+void EulerPathsHandler::randomOneEulerPathStrategy(const std::string& outputFilename){
+    int     loop      = 1;
+    double  bestHPWL  = std::numeric_limits<double>::max();
+    clock_t findTime  = MIN(MAX_FIND_TIME, m_PMOSNet.m_instances.size() * TO_MICRO_SEC);
+    clock_t startTime = clock();
+    std::vector<std::string> bestInstancePathP, bestInstancePathN, bestNodeGatePathP, bestNodeGatePathN;
+    do
+    {
+        std::vector<std::string> nodePathP, gatePathP, instancePathP, nodeGatePathP;
+        std::vector<std::string> nodePathN, gatePathN, instancePathN, nodeGatePathN;
+        std::vector<std::string> newInstanceDummiesP, newNodeGateDummiesP;
+        std::vector<std::string> newInstanceDummiesN, newNodeGateDummiesN;
+
+        m_PMOSNet.randomEulerPath(nodePathP, gatePathP, instancePathP, nodeGatePathP);
+        m_NMOSNet.makeNodeGateEulerPath(gatePathP, nodeGatePathN, nodePathN, gatePathN);
+        m_NMOSNet.makeInstanceEulerPath(nodePathN, gatePathN, instancePathN);
+
+        alignInstanceDummies(instancePathP, instancePathN, newInstanceDummiesP, newInstanceDummiesN);
+        alignNodeGateDummies(nodeGatePathP, nodeGatePathN, newNodeGateDummiesP, newNodeGateDummiesN);
+
+        double nowHPWL = getHPWL(newNodeGateDummiesP, newNodeGateDummiesN);
+        if (nowHPWL < bestHPWL){
+            bestHPWL = nowHPWL;
+            bestInstancePathP = newInstanceDummiesP;
+            bestInstancePathN = newInstanceDummiesN;
+            bestNodeGatePathP = newNodeGateDummiesP;
+            bestNodeGatePathN = newNodeGateDummiesN;
+#if DEBUG == 1
+            LOOP_START(loop)
+            DASH_LINE
+            LOG("[Best PMOS Instance Path with Dummies] :")
+            printVector(bestInstancePathP);
+            LOG("[Best NMOS Instance Path with Dummies] :")
+            printVector(bestInstancePathN);
+            DASH_LINE
+            LOG("[Best PMOS NodeGate Path with Dummies] :")
+            printVector(bestNodeGatePathP);
+            LOG("[Best NMOS NodeGate Path with Dummies] :")
+            printVector(bestNodeGatePathN);
+            DASH_LINE
+            LOGKV(bestHPWL)
+#endif
+        }
+
+        if (clock() - startTime > findTime){
+            outputToFile(
+                outputFilename,
+                bestInstancePathP,
+                bestInstancePathN,
+                bestNodeGatePathP,
+                bestNodeGatePathN,
+                bestHPWL
+            );
+            break;
+        }
+
+        loop++;
+
+    } while (true);
+    
 }
 
 void EulerPathsHandler::alignInstanceDummies(
@@ -260,24 +320,23 @@ double EulerPathsHandler::getHPWL(const std::vector<std::string>& nodeGateEulerP
     bool isMaxDistanceUpdated;
 
     std::unordered_set<std::string> foundSet;
+    std::unordered_map<std::string, NodeHPWL> maxDistanceMap;
 
     // Src = PMOS, Dst = NMOS
     srcX = 0.;
     for (int i = 0; i < n; i++){
         const std::string& srcName = nodeGateEulerPathP[i];
         bool isGate = cumDistance(i, n, srcName, srcX);
-        if (isGate || foundSet.count(srcName))
+        if (isGate)
             continue;
-        else
-            foundSet.emplace(srcName);
 
-        maxDistance = 0.; 
+        maxDistance = maxDistanceMap[srcName].maxDistanceX;
         findMaxDistance(nodeGateEulerPathP, srcName, n, i + 1, srcX, srcX, maxDistance);
         if (m_NMOSNet.m_foundNodeMap.count(srcName)){
-            findMaxDistance(nodeGateEulerPathN, srcName, n, 0, srcX, 0.  , maxDistance);
-            totalHPWL += vertical;
+            findMaxDistance(nodeGateEulerPathN, srcName, n, 0, srcX, 0., maxDistance);
+            maxDistanceMap[srcName].isVertical = true;
         }
-        totalHPWL += maxDistance;
+        maxDistanceMap[srcName].maxDistanceX = maxDistance;
     }
 
     // Src = NMOS, Dst = PMOS
@@ -285,18 +344,22 @@ double EulerPathsHandler::getHPWL(const std::vector<std::string>& nodeGateEulerP
     for (int i = 0; i < n; i++){
         const std::string& srcName = nodeGateEulerPathN[i];
         bool isGate = cumDistance(i, n, srcName, srcX);
-        if (isGate || foundSet.count(srcName))
+        if (isGate)
             continue;
-        else
-            foundSet.emplace(srcName);
 
-        maxDistance = 0.; 
+        maxDistance = maxDistanceMap[srcName].maxDistanceX;
         findMaxDistance(nodeGateEulerPathN, srcName, n, i + 1, srcX, srcX, maxDistance);
         if (m_PMOSNet.m_foundNodeMap.count(srcName)){
-            findMaxDistance(nodeGateEulerPathP, srcName, n, 0, srcX, 0.  , maxDistance);
-            totalHPWL += vertical;
+            findMaxDistance(nodeGateEulerPathP, srcName, n, 0, srcX, 0., maxDistance);
+            maxDistanceMap[srcName].isVertical = true;
         }
-        totalHPWL += maxDistance;
+        maxDistanceMap[srcName].maxDistanceX = maxDistance;
+    }
+
+    for (auto& it : maxDistanceMap){
+        totalHPWL += it.second.maxDistanceX;
+        if (it.second.isVertical)
+            totalHPWL += vertical;
     }
 
     return totalHPWL;
@@ -368,6 +431,7 @@ void EulerPath::parseOneLine(
     );
 }
 
+#if DEBUG == 1
 void EulerPath::print(){
     printInstances();
     printNodes();
@@ -375,6 +439,7 @@ void EulerPath::print(){
     printNode2Gate();
     printGate2Node();
     printNode2Node();
+    printGate2Instance();
 }
 
 void EulerPath::printInstances(){
@@ -417,6 +482,11 @@ void EulerPath::printGate2Node(){
 void EulerPath::printNode2Node(){
     printNode2Node_(m_node2node);
 }
+
+void EulerPath::printGate2Instance(){
+    printGate2Instance_(m_gate2inst);
+}
+#endif
 
 void EulerPath::randomEulerPath(
     std::vector<std::string>& nodeEulerPath,
@@ -604,7 +674,7 @@ Instance* EulerPath::makeInstance(Node* drainPtr, Gate* gatePtr, Node* sourcePtr
         name, drainPtr, sourcePtr, gatePtr, type, w, l
     };
     m_instances.push_back(instPtr);
-    m_gate2inst[gatePtr->name] = instPtr;
+    m_gate2inst[gatePtr->name].push_back(instPtr);
     m_instanceMap[drainPtr->name][gatePtr->name][sourcePtr->name] = instPtr;
     m_instanceMap[sourcePtr->name][gatePtr->name][drainPtr->name] = instPtr;
     return instPtr;
@@ -684,12 +754,24 @@ void EulerPath::makeNodeGateEulerPath(
     }
     nodeGateEulerPath.push_back(nodeEulerPath.back());
 }
-
 void EulerPath::makeNodeGateEulerPath(
     const std::vector<std::string>& otherGateEulerPath, 
-          std::vector<std::string>& nodeGateEulerPath
+          std::vector<std::string>& nodeGateEulerPath,
+          std::vector<std::string>& nodeEulerPath,
+          std::vector<std::string>& gateEulerPath
 ){
-    auto randomDrainSourcePtr = [&](Instance* instPtr, Node* nodePtr0, Node* nodePtr1){
+    Gate2Instance gate2instFeasible = m_gate2inst;
+
+    auto randomPopInstance = [&](const std::string& gateName) -> Instance* {
+        std::vector<Instance*>& instVec = gate2instFeasible[gateName];
+        int i = RANDOM_INT(instVec.size());
+        Instance* ptr = instVec[i];
+        instVec.erase(instVec.begin() + i);
+        return ptr;
+    };
+
+    auto randomDrainSourcePtr = [&](const std::string& gateName, Node*& nodePtr0, Node*& nodePtr1){
+        const Instance* instPtr = randomPopInstance(gateName);
         if (RANDOM_BOOL) {
             nodePtr0 = instPtr->drain;
             nodePtr1 = instPtr->source;
@@ -700,91 +782,155 @@ void EulerPath::makeNodeGateEulerPath(
     };
 
     auto findFirstPairNodesOrder = [&](const std::string& gateName0, const std::string& gateName1, std::string& nodeNameOne, std::string& nodeNameTwo, std::string& nodeNameThree) -> bool {
-        const std::string& nodeName00 = m_gate2inst[gateName0]->drain->name;
-        const std::string& nodeName01 = m_gate2inst[gateName0]->source->name;
-        const std::string& nodeName10 = m_gate2inst[gateName1]->drain->name;
-        const std::string& nodeName11 = m_gate2inst[gateName1]->source->name;
+        std::vector<Instance*>& instVec0 = gate2instFeasible[gateName0];
+        std::vector<Instance*>& instVec1 = gate2instFeasible[gateName1];
+        for (int i = 0; i < instVec0.size(); i++)
+        for (int j = 0; j < instVec1.size(); j++)
+        {
+            const Instance*    inst0      = instVec0[i];
+            const Instance*    inst1      = instVec1[j];
+            const std::string& nodeName00 = inst0->drain->name;
+            const std::string& nodeName01 = inst0->source->name;
+            const std::string& nodeName10 = inst1->drain->name;
+            const std::string& nodeName11 = inst1->source->name;
+            if (nodeName00 == nodeName10){
+                nodeNameOne   = nodeName01;
+                nodeNameTwo   = nodeName00;
+                nodeNameThree = nodeName11;
+            } else if (nodeName00 == nodeName11){
+                nodeNameOne   = nodeName01;
+                nodeNameTwo   = nodeName00;
+                nodeNameThree = nodeName10;
+            } else if (nodeName01 == nodeName10){
+                nodeNameOne   = nodeName00;
+                nodeNameTwo   = nodeName01;
+                nodeNameThree = nodeName11;
+            } else if (nodeName01 == nodeName11){
+                nodeNameOne   = nodeName00;
+                nodeNameTwo   = nodeName01;
+                nodeNameThree = nodeName10;
+            } else 
+                continue;
 
-        if (nodeName00 == nodeName10){
-            nodeNameOne   = nodeName01;
-            nodeNameTwo   = nodeName00;
-            nodeNameThree = nodeName11;
-        } else if (nodeName00 = nodeName11){
-            nodeNameOne   = nodeName01;
-            nodeNameTwo   = nodeName00;
-            nodeNameThree = nodeName10;
-        } else if (nodeName01 = nodeName10){
-            nodeNameOne   = nodeName00;
-            nodeNameTwo   = nodeName01;
-            nodeNameThree = nodeName11;
-        } else if (nodeName01 = nodeName11){
-            nodeNameOne   = nodeName00;
-            nodeNameTwo   = nodeName01;
-            nodeNameThree = nodeName10;
-        } else 
-            return false;
-
-        return true;
+            instVec0.erase(instVec0.begin() + i);
+            instVec1.erase(instVec1.begin() + j);
+            return true;
+        }
+        return false;
     };
 
-    auto findNodeOrderFromLast = [&](const std::string& last, const std::string& gateName, std::string& nodeNameNext) -> bool{
-        const std::string& nodeName0 = m_gate2inst[gateName]->drain->name;
-        const std::string& nodeName1 = m_gate2inst[gateName]->source->name;
-        if (nodeName0 == last)
-            nodeNameNext = nodeName0;
-        else if (nodeName1 == last)
-            nodeNameNext = nodeName1;
-        else 
-            return false;
+    auto findNodeOrderFromLast = [&](const std::string& last, const std::string& gateName, std::string& nodeNameNext) -> bool {
+        std::vector<Instance*>& instVec = gate2instFeasible[gateName];
+        for (int i = 0; i < instVec.size(); i++){
+            const Instance*    inst      = instVec[i];
+            const std::string& nodeName0 = inst->drain->name;
+            const std::string& nodeName1 = inst->source->name;
+            if (nodeName0 == last)
+                nodeNameNext = nodeName1;
+            else if (nodeName1 == last)
+                nodeNameNext = nodeName0;
+            else 
+                continue;
+            
+            instVec.erase(instVec.begin() + i);
+            return true;
+        }
+        return false;
+    };
+
+    auto pushNode = [&](const std::string& name){
+        nodeGateEulerPath.push_back(name);
+        nodeEulerPath.push_back(name);
+    };
+
+    auto pushGate = [&](const std::string& name){
+        nodeGateEulerPath.push_back(name);
+        gateEulerPath.push_back(name);
+    };
+
+    auto pushDummy = [&](){
+        nodeGateEulerPath.push_back(DUMMY_NAME);
+        nodeEulerPath.push_back(DUMMY_NAME);
+        gateEulerPath.push_back(DUMMY_NAME);    
+        gateEulerPath.push_back(DUMMY_NAME);
+    };
+
+    std::string  lastNodeName;   
+    Node        *nodePtr0, *nodePtr1;
+    int          nGate       = otherGateEulerPath.size();
+    bool         isLastDummy = true;
+    for (int i = 0; i < nGate; i++){
+        if (i == nGate - 1){
+            if (isLastDummy){
+                const std::string& gateName = otherGateEulerPath[i];
+                randomDrainSourcePtr(gateName, nodePtr0, nodePtr1);
+                pushNode(nodePtr0->name);
+                pushGate(gateName);
+                pushNode(nodePtr1->name);
+            }
+            break;
+        }
         
-        return true;
-    };
-
-    std::string last = "";
-    bool isLastDummy = true;
-    for (int i = 0; i < otherGateEulerPath.size() - 1; i++){
         const std::string& gateName0 = otherGateEulerPath[i];
         const std::string& gateName1 = otherGateEulerPath[i + 1];
         if (isLastDummy){
-            Node *nodePtr0, *nodePtr1;
             if (gateName1 == DUMMY_NAME){
-                randomDrainSourcePtr(m_gate2inst[gateName0], nodePtr0, nodePtr1);
-                nodeGateEulerPath.push_back(nodePtr0->name);
-                nodeGateEulerPath.push_back(gateName0);
-                nodeGateEulerPath.push_back(nodePtr1->name);
-                nodeGateEulerPath.push_back(DUMMY_NAME);
+                randomDrainSourcePtr(gateName0, nodePtr0, nodePtr1);
+                pushNode(nodePtr0->name);
+                pushGate(gateName0);
+                pushNode(nodePtr1->name);
+                pushDummy();
+                lastNodeName = DUMMY_NAME;
+                isLastDummy  = true;
+                i+=2;
+                continue;
             } else {
                 std::string nodeNameOne, nodeNameTwo, nodeNameThree;
                 if (findFirstPairNodesOrder(gateName0, gateName1, nodeNameOne, nodeNameTwo, nodeNameThree)){
-                    nodeGateEulerPath.push_back(nodeNameOne);
-                    nodeGateEulerPath.push_back(gateName0);
-                    nodeGateEulerPath.push_back(nodeNameTwo);
-                    nodeGateEulerPath.push_back(gateName1);
-                    nodeGateEulerPath.push_back(nodeNameThree);
+                    pushNode(nodeNameOne);
+                    pushGate(gateName0);
+                    pushNode(nodeNameTwo);
+                    pushGate(gateName1);
+                    pushNode(nodeNameThree);
+                    lastNodeName = nodeNameThree;
                 } else {
-                    randomDrainSourcePtr(m_gate2inst[gateName0], nodePtr0, nodePtr1);
-                    nodeGateEulerPath.push_back(nodePtr0->name);
-                    nodeGateEulerPath.push_back(gateName0);
-                    nodeGateEulerPath.push_back(nodePtr1->name);
-                    nodeGateEulerPath.push_back(DUMMY_NAME);
-                    randomDrainSourcePtr(m_gate2inst[gateName1], nodePtr0, nodePtr1);
-                    nodeGateEulerPath.push_back(nodePtr0->name);
-                    nodeGateEulerPath.push_back(gateName1);
-                    nodeGateEulerPath.push_back(nodePtr1->name);
+                    randomDrainSourcePtr(gateName0, nodePtr0, nodePtr1);
+                    pushNode(nodePtr0->name);
+                    pushGate(gateName0);
+                    pushNode(nodePtr1->name);
+                    pushDummy();
+                    randomDrainSourcePtr(gateName1, nodePtr0, nodePtr1);
+                    pushNode(nodePtr0->name);
+                    pushGate(gateName1);
+                    pushNode(nodePtr1->name);
+                    lastNodeName = nodePtr1->name;
                 }
+                isLastDummy = false;
             }
-            isLastDummy = false;
-        } 
-        else {
-            if (gateName0 == DUMMY_NAME){
+        } else {
+            if (gateName1 == DUMMY_NAME){
+                pushDummy();
+                lastNodeName = DUMMY_NAME;
                 isLastDummy = true;
+                i+=2;
                 continue;
-            } 
-            else if (gateName1 == DUMMY_NAME){
-                nodeGateEulerPath.push_back(DUMMY_NAME);
             }
             else {
-
+                std::string nodeNameNext;
+                if (findNodeOrderFromLast(lastNodeName, gateName1, nodeNameNext)){
+                    pushGate(gateName1);
+                    pushNode(nodeNameNext);
+                    lastNodeName = nodeNameNext;
+                }
+                else {
+                    randomDrainSourcePtr(gateName1, nodePtr0, nodePtr1);
+                    pushDummy();
+                    pushNode(nodePtr0->name);
+                    pushGate(gateName1);
+                    pushNode(nodePtr1->name);
+                    lastNodeName = nodePtr1->name;
+                }
+                isLastDummy = false;
             }
         }
     }
