@@ -1,4 +1,5 @@
 FILE_NUM   = $(i)
+COMMIT_MSG = ${m}
 CPP_FILES  = ${wildcard *.cpp}
 HDR_FILES  = ${wildcard include/*.hpp}
 LAB        = Lab3
@@ -24,4 +25,7 @@ clean:
 
 test:
 	make
-	./${LAB}
+	./${LAB} data/input${FILE_NUM}.in data/output${FILE_NUM}.out
+
+cm:
+	git commit -am ${COMMIT_MSG}

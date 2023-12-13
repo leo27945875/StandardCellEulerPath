@@ -7,8 +7,12 @@
 #include "utils.hpp"
 #include "structure.hpp"
 
-#define DUMMY_NAME        "_Dummy_"
-#define DUMMY_OUTPUT_NAME "Dummy"
+#define DUMMY_NAME "Dummy"
+
+#define VERTICAL_LENGTH 27
+#define NODE_MID_LENGTH 34
+#define NODE_EXT_LENGTH 25
+#define GATE_LENGTH     20
 
 
 class EulerPath {
@@ -16,12 +20,12 @@ public:
     using Node2GateMap    = std::unordered_map<Node*, std::vector<Gate*>>;
     using Gate2NodeMap    = std::unordered_map<Gate*, std::vector<Node*>>;
     using Node2NodeMap    = std::unordered_map<Node*, std::vector<Edge*>>;
+    using Gate2Instance   = std::unordered_map<std::string, Instance*>;
 
     using NodeNameMap     = std::unordered_map<std::string, Node*>;
     using GateNameMap     = std::unordered_map<std::string, Gate*>;
 
     using NodeFeasibleMap = std::unordered_map<Node*, int>;
-    using GateFeasibleMap = std::unordered_map<Gate*, std::unordered_set<Node*>>;
 
     using InstanceMap     = std::unordered_map<std::string, 
                             std::unordered_map<std::string, 
@@ -30,23 +34,20 @@ public:
 public:
     MOS                     m_type;
 
-    std::vector<Instance*>  m_instances;
-    std::vector<Node*>      m_nodes;
-    std::vector<Gate*>      m_gates;
+    std::vector<Instance*>  m_instances, m_instancesNoDummy;
+    std::vector<Node*>      m_nodes, m_nodesNoDummy;
+    std::vector<Gate*>      m_gates, m_gatesNoDummy;
+
+    InstanceMap             m_instanceMap, m_instanceMapNoDummy;
+    Node2GateMap            m_node2gate, m_node2gateNoDummy;
+    Gate2NodeMap            m_gate2node, m_gate2nodeNoDummy;
+    Node2NodeMap            m_node2node, m_node2nodeNoDummy;
+    Gate2Instance           m_gate2inst;
 
     std::vector<Node*>      m_nodesStartEnd;
-
-    Node2GateMap            m_node2gate;
-    Gate2NodeMap            m_gate2node;
-    Node2NodeMap            m_node2node;
-
     NodeNameMap             m_foundNodeMap;
     GateNameMap             m_foundGateMap;
-
     NodeFeasibleMap         m_nodeFeasibleNumGate;
-    GateFeasibleMap         m_gateFeasibleNodeSet;
-
-    InstanceMap             m_instanceMap;
 
     Node* const             m_dummyNode  = new Node(DUMMY_NAME, true);
     Gate* const             m_dummyGate  = new Gate(DUMMY_NAME, true);
@@ -78,16 +79,15 @@ public:
 
     void      randomEulerPath        (std::vector<std::string>& nodeEulerPath,
                                       std::vector<std::string>& gateEulerPath, 
-                                      std::vector<std::string>& instanceEulerPath);
+                                      std::vector<std::string>& instanceEulerPath,
+                                      std::vector<std::string>& nodeGateEulerPath);
     Node*     randomNode             ();
     Node*     randomOddDegreeNode    (bool isPop = false);
-    Node*     randomFeasibleNode     (Gate* gate);
     int       randomFeasibleEdge     (Node* node);
     
     Node*     initStartDummyNodes    ();
     void      initGateVisit          ();
     void      initFeasibleNodeNumGate();
-    void      initFeasibleGateNodeSet();
     void      updateFeasibleInfo     (Node* node, int edgeIdx);
     void      visit                  (Node* node, int edgeIdx);
     void      link                   (Node* drainPtr, Gate* gatePtr, Node* sourcePtr);
@@ -100,30 +100,48 @@ public:
     void      makeInstanceEulerPath  (const std::vector<std::string>& nodeEulerPath, 
                                       const std::vector<std::string>& gateEulerPath, 
                                       std::vector<std::string>& instanceEulerPath);
+    void      makeNodeGateEulerPath  (const std::vector<std::string>& nodeEulerPath, 
+                                      const std::vector<std::string>& gateEulerPath, 
+                                      std::vector<std::string>& nodeGateEulerPath);
+    void      makeNodeGateEulerPath  (const std::vector<std::string>& otherGateEulerPath,
+                                      std::vector<std::string>& nodeGateEulerPath);
+    void      recordNoDummyInfo      ();
+    void      removeDummies          ();
+
+    double    getHalfHeight          ();
 };
 
 
 class EulerPathsHandler {
 public:
-    EulerPath m_NMOSNet = EulerPath(MOS::N);
     EulerPath m_PMOSNet = EulerPath(MOS::P);
+    EulerPath m_NMOSNet = EulerPath(MOS::N);
 
 public:
     EulerPathsHandler(std::string inputFilename);
 
 public:
-    void print();
-    void print(MOS type);
+    void   print                     ();
+    void   print                     (MOS type);
 
-    void randomTwoEulerPathStrategy(const std::string& outputFilename);
+    void   randomTwoEulerPathStrategy(const std::string& outputFilename);
 
-    void alignInstanceDummies(const std::vector<std::string>& dummiesN, 
-                              const std::vector<std::string>& dummiesP,
-                                    std::vector<std::string>& newDummiesN,
-                                    std::vector<std::string>& newDummiesP);
-    void alignNodeGateDummies(const std::vector<std::string>& dummiesN, 
-                              const std::vector<std::string>& dummiesP,
-                                    std::vector<std::string>& newDummiesN,
-                                    std::vector<std::string>& newDummiesP);
-    void outputToFile(const std::string& outputFilename);
+    double getHPWL                   (const std::vector<std::string>& nodeGateEulerPathP,
+                                      const std::vector<std::string>& nodeGateEulerPathN);
+    bool   isSameGateOrder           (const std::vector<std::string>& nodeGateEulerPathP, 
+                                      const std::vector<std::string>& nodeGateEulerPathN);
+    void   alignInstanceDummies      (const std::vector<std::string>& dummiesP, 
+                                      const std::vector<std::string>& dummiesN,
+                                            std::vector<std::string>& newDummiesP,
+                                            std::vector<std::string>& newDummiesN);
+    void   alignNodeGateDummies      (const std::vector<std::string>& dummiesP, 
+                                      const std::vector<std::string>& dummiesN,
+                                            std::vector<std::string>& newDummiesP,
+                                            std::vector<std::string>& newDummiesN);
+    void   outputToFile              (const std::string& outputFilename,
+                                      const std::vector<std::string>& instanceEulerPathP,
+                                      const std::vector<std::string>& instanceEulerPathN,
+                                      const std::vector<std::string>& nodeGateEulerPathP,
+                                      const std::vector<std::string>& nodeGateEulerPathN,
+                                      double HPWL);
 };

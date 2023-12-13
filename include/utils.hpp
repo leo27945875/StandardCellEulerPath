@@ -13,7 +13,7 @@
     #define LOG(x)                 std::cout << x << std::endl;
     #define LOGKV(x)               std::cout << #x << " = " << (x) <<  std::endl;
     #define LOGFORWARD(n, g, t, m) std::cout << "Node: " << (n->name) << "(" << (m[n]) << ")" << ", Gate: " << (g->name) << ", Next: " << (t->name) << "(" << (m[t]) << ")" << std::endl;
-    #define LOOP_START(x)          std::cout << "========================== " << "Loop " << (x) << " ==========================\n" << std::endl;
+    #define LOOP_START(x)          std::cout << "\n\n========================== " << "Loop " << (x) << " ==========================\n";
     #define DDASH_LINE             std::cout << "==============================================================" << std::endl;
     #define DASH_LINE              std::cout << "--------------------------------------------------------------" << std::endl;
     #define MOVE_INFO(x)           std::cout << "Move " << x->m_number << "  (from: " << (x->m_group + 1) << " to: " << ((!x->m_group) + 1) << ")" << std::endl;
@@ -41,6 +41,10 @@
 #define RANDOM_BETWEEN(MIN, MAX) (rand() % (MAX - MIN) + MIN)
 #define RANDOM_BOOL              (static_cast<bool>(rand() % 2))
 #define RANDOM_0TO1              (static_cast<double>(rand()) / RAND_MAX)
+
+#define MIN(x, y) (x < y)? x : y
+#define MAX(x, y) (x > y)? x : y
+#define ABS(x)    (x >= 0)? x : -x
 
 enum class MOS : int8_t {
     P, N
@@ -74,4 +78,13 @@ void listToVector(const std::list<T>& list, std::vector<T>& vec){
         list.pop_front();
         i++;
     }
+}
+
+template<class T>
+std::string concatStringVector(const std::vector<T>& vec){
+    std::string concat;
+    for (const auto& str : vec)
+        concat += (str + " ");
+    
+    return concat;
 }
