@@ -1,0 +1,5 @@
+5026.5
+M21 M42 M37 Dummy M35 M13 Dummy M7 M46 M25 Dummy M22 M3 Dummy M1 M10 Dummy M11 M49 M45 M28 
+clkn CLK VDD SET net077 SS pd2 Dummy pd2 clkb SH clkn MS Dummy MS MH net079 SET VDD SH QN Dummy clkb clkn VDD D pu1 Dummy pu1 clkb MH clkn net051 Dummy net051 MS net078 RESET VDD RESET net076 SH SS 
+M20 M43 M33 Dummy M12 M34 Dummy M6 M47 M24 Dummy M23 M5 Dummy M9 M4 Dummy M8 M48 M44 M29 
+clkn CLK VSS SET pd3 SS VSS Dummy MS clkb SH clkn pd3 Dummy VSS MH MS SET VSS SH QN Dummy clkb clkn VSS D pd1 Dummy net020 clkb MH clkn pd1 Dummy VSS MS net020 RESET VSS RESET SS SH VSS 
